@@ -1,7 +1,6 @@
 package moneroutil
 
 import (
-	"fmt"
 	"io"
 )
 
@@ -15,13 +14,10 @@ const (
 // C = aG + bH where a = mask and b = amount
 // senderPk is the one-time public key for ECDH exchange
 type ecdhTuple struct {
-	mask     Key
-	amount   Key
-	senderPk Key
+	mask   Key
+	amount Key
+	// senderPk Key
 }
-
-// Range proof commitments
-type Key64 [64]Key
 
 // Borromean Signature
 type BoroSig struct {

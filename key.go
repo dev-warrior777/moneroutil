@@ -9,6 +9,9 @@ const (
 	KeyLength = 32
 )
 
+// Range proof commitments
+type Key64 [64]Key
+
 // Key can be a Scalar or a Point
 type Key [KeyLength]byte
 
