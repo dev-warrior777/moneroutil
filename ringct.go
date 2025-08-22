@@ -1,22 +1,30 @@
 package moneroutil
 
 import (
+	"fmt"
 	"io"
 )
 
 const (
-	RCTTypeNull = iota
-	RCTTypeFull
-	RCTTypeSimple
+	// RCTTypeNull = iota
+	// RCTTypeFull
+	// RCTTypeSimple
+	RCTTypeNull            = 0
+	RCTTypeFull            = 1
+	RCTTypeSimple          = 2
+	RCTTypeBulletproof     = 3
+	RCTTypeBulletproof2    = 4
+	RCTTypeCLSAG           = 5
+	RCTTypeBulletproofPlus = 6
 )
 
 // Pedersen Commitment is generated from this struct
 // C = aG + bH where a = mask and b = amount
 // senderPk is the one-time public key for ECDH exchange
 type ecdhTuple struct {
-	mask   Key
-	amount Key
-	// senderPk Key
+	mask     Key
+	amount   Key
+	senderPk Key
 }
 
 // Borromean Signature
@@ -317,40 +325,54 @@ func ParseRingCtSignature(buf io.Reader, nInputs, nOutputs, nMixin int) (result 
 	if err != nil {
 		return
 	}
+
 	r.sigType = uint8(sigType[0])
-	if r.sigType == RCTTypeNull {
+
+	var nMg, nSS int
+
+	switch r.sigType {
+	case RCTTypeNull:
 		result = r
 		return
-	}
-	// warrior 'suspect or:' ->
-	// if r.sigType != RCTTypeFull || r.sigType != RCTTypeSimple {
-	// 	err = fmt.Errorf("Bad sigType %d", r.sigType)
-	// }
-	//
-	// corrected but useless as the only other value has been dealt with above
-	// goodSigType := r.sigType == RCTTypeFull || r.sigType == RCTTypeSimple
-	// if !goodSigType {
-	// 	return nil, fmt.Errorf("bad sigType %d", r.sigType)
-	// }
-	// <-
-	r.txFee, err = ReadVarInt(buf)
-	if err != nil {
-		return
-	}
-	var nMg, nSS int
-	if r.sigType == RCTTypeSimple {
+	case RCTTypeFull:
+		nMg = 1
+		nSS = nInputs + 1
+	case RCTTypeSimple:
 		nMg = nInputs
 		nSS = 2
 		r.pseudoOuts = make([]Key, nInputs)
-		for i := 0; i < nInputs; i++ {
+		for i := range nInputs {
 			if r.pseudoOuts[i], err = ParseKey(buf); err != nil {
 				return
 			}
 		}
-	} else {
-		nMg = 1
-		nSS = nInputs + 1
+	case RCTTypeBulletproof:
+		result = nil
+		err = fmt.Errorf("bulletproofs not impl")
+		return
+	case RCTTypeBulletproof2:
+		result = nil
+		err = fmt.Errorf("bulletproofs not impl")
+		return
+	case RCTTypeCLSAG:
+		result = nil
+		err = fmt.Errorf("CLSAG is not implemented yet")
+		return
+	case RCTTypeBulletproofPlus:
+		result = nil
+		err = fmt.Errorf("bulletproofs plus is not implemented yet")
+		return
+	default:
+		result = nil
+		err = fmt.Errorf("unknown sig type %d", r.sigType)
+		return
 	}
+
+	r.txFee, err = ReadVarInt(buf)
+	if err != nil {
+		return
+	}
+
 	r.ecdhInfo = make([]ecdhTuple, nOutputs)
 	for i := 0; i < nOutputs; i++ {
 		if r.ecdhInfo[i].mask, err = ParseKey(buf); err != nil {
@@ -372,6 +394,8 @@ func ParseRingCtSignature(buf io.Reader, nInputs, nOutputs, nMixin int) (result 
 			return
 		}
 	}
+
+	// MSLAG only?
 	r.mlsagSigs = make([]MlsagSig, nMg)
 	for i := 0; i < nMg; i++ {
 		r.mlsagSigs[i].ss = make([][]Key, nMixin+1)
@@ -390,3 +414,84 @@ func ParseRingCtSignature(buf io.Reader, nInputs, nOutputs, nMixin int) (result 
 	result = r
 	return
 }
+
+// func ParseRingCtSignature(buf io.Reader, nInputs, nOutputs, nMixin int) (result *RctSig, err error) {
+// 	r := new(RctSig)
+// 	sigType := make([]byte, 1)
+// 	_, err = buf.Read(sigType)
+// 	if err != nil {
+// 		return
+// 	}
+// 	r.sigType = uint8(sigType[0])
+// 	if r.sigType == RCTTypeNull {
+// 		result = r
+// 		return
+// 	}
+// 	// warrior 'suspect or:' ->
+// 	// if r.sigType != RCTTypeFull || r.sigType != RCTTypeSimple {
+// 	// 	err = fmt.Errorf("Bad sigType %d", r.sigType)
+// 	// }
+// 	//
+// 	// corrected but useless as the only other value has been dealt with above
+// 	// goodSigType := r.sigType == RCTTypeFull || r.sigType == RCTTypeSimple
+// 	// if !goodSigType {
+// 	// 	return nil, fmt.Errorf("bad sigType %d", r.sigType)
+// 	// }
+// 	// <-
+// 	r.txFee, err = ReadVarInt(buf)
+// 	if err != nil {
+// 		return
+// 	}
+// 	var nMg, nSS int
+// 	if r.sigType == RCTTypeSimple {
+// 		nMg = nInputs
+// 		nSS = 2
+// 		r.pseudoOuts = make([]Key, nInputs)
+// 		for i := 0; i < nInputs; i++ {
+// 			if r.pseudoOuts[i], err = ParseKey(buf); err != nil {
+// 				return
+// 			}
+// 		}
+// 	} else {
+// 		nMg = 1
+// 		nSS = nInputs + 1
+// 	}
+// 	r.ecdhInfo = make([]ecdhTuple, nOutputs)
+// 	for i := 0; i < nOutputs; i++ {
+// 		if r.ecdhInfo[i].mask, err = ParseKey(buf); err != nil {
+// 			return
+// 		}
+// 		if r.ecdhInfo[i].amount, err = ParseKey(buf); err != nil {
+// 			return
+// 		}
+// 	}
+// 	r.outPk = make([]CtKey, nOutputs)
+// 	for i := 0; i < nOutputs; i++ {
+// 		if r.outPk[i], err = ParseCtKey(buf); err != nil {
+// 			return
+// 		}
+// 	}
+// 	r.rangeSigs = make([]RangeSig, nOutputs)
+// 	for i := 0; i < nOutputs; i++ {
+// 		if r.rangeSigs[i], err = ParseRangeSig(buf); err != nil {
+// 			return
+// 		}
+// 	}
+// 	r.mlsagSigs = make([]MlsagSig, nMg)
+// 	for i := 0; i < nMg; i++ {
+// 		r.mlsagSigs[i].ss = make([][]Key, nMixin+1)
+// 		for j := 0; j < nMixin+1; j++ {
+// 			r.mlsagSigs[i].ss[j] = make([]Key, nSS)
+// 			for k := 0; k < nSS; k++ {
+// 				if r.mlsagSigs[i].ss[j][k], err = ParseKey(buf); err != nil {
+// 					return
+// 				}
+// 			}
+// 		}
+// 		if r.mlsagSigs[i].cc, err = ParseKey(buf); err != nil {
+// 			return
+// 		}
+// 	}
+// 	result = r
+// 	return
+// }

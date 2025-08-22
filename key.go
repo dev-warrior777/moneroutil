@@ -68,3 +68,17 @@ func ParseKey(buf io.Reader) (result Key, err error) {
 	copy(result[:], key)
 	return
 }
+
+func ParseTaggedKey(buf io.Reader) (result Key, tag byte, err error) {
+	key := make([]byte, KeyLength)
+	if _, err = buf.Read(key); err != nil {
+		return
+	}
+	copy(result[:], key)
+	bufTag := make([]byte, 1)
+	if _, err = buf.Read(bufTag); err != nil {
+		return
+	}
+	tag = bufTag[0]
+	return
+}

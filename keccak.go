@@ -1,6 +1,8 @@
 package moneroutil
 
 import (
+	"math/big"
+
 	"github.com/ebfe/keccak"
 )
 
@@ -36,4 +38,14 @@ func Keccak512(data ...[]byte) (result Hash) {
 	r := h.Sum(nil)
 	copy(result[:], r)
 	return
+}
+
+func scReduce32(data []byte) []byte {
+	l := new(big.Int)
+	l.SetString("1000000000000000000000000000000014def9dea2f79cd65812631a5cf5d3ed", 16)
+	hashInt := new(big.Int).SetBytes(data)
+	reduced := new(big.Int).Mod(hashInt, l)
+	result := make([]byte, 32)
+	reduced.FillBytes(result) // Left-pad with zeros to 32 bytes
+	return result
 }

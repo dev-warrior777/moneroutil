@@ -6,9 +6,10 @@ import (
 )
 
 const (
-	txInGenMarker    = 0xff
-	txInToKeyMarker  = 2
-	txOutToKeyMarker = 2
+	txInGenMarker          = 0xff
+	txInToKeyMarker        = 2
+	txOutToKeyMarker       = 2
+	txOutToTaggedKeyMarker = 3
 )
 
 var UnimplementedError = fmt.Errorf("Unimplemented")
@@ -29,8 +30,9 @@ type TxInSerializer interface {
 }
 
 type TxOut struct {
-	amount uint64
-	key    Key
+	amount  uint64
+	key     Key
+	viewTag byte
 }
 
 type TransactionPrefix struct {
@@ -277,6 +279,8 @@ func ParseTxOut(buf io.Reader) (txOut *TxOut, err error) {
 	switch {
 	case marker[0] == txOutToKeyMarker:
 		t.key, err = ParseKey(buf)
+	case marker[0] == txOutToTaggedKeyMarker:
+		t.key, t.viewTag, err = ParseTaggedKey(buf)
 	default:
 		err = fmt.Errorf("Bad Marker")
 		return
