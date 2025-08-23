@@ -3136,3 +3136,13 @@ func FeReduce(h, f *FieldElement) {
 		h[i] = f[i]
 	}
 }
+
+// ToExtended converts a ProjectiveGroupElement to an ExtendedGroupElement.
+func (p *ProjectiveGroupElement) ToExtended(e *ExtendedGroupElement) {
+	var t1 FieldElement
+	FeMul(&t1, &p.X, &p.Z)  // t1 = X * Z
+	FeMul(&e.Y, &p.Y, &p.Z) // Y = Y * Z
+	FeMul(&e.Z, &p.Z, &p.Z) // Z = Z * Z
+	e.X = t1
+	e.T.Zero() // Set T to zero since ProjectiveGroupElement lacks T
+}
